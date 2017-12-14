@@ -16,6 +16,6 @@ def get_mongo_conn ():
 
   uri = 'mongodb://%s:%s/'%(host, port)
   if username and password:
-    uri = 'mongodb://%s:%s@%s:%s/'%(host, port)
+    uri = 'mongodb://%s:%s@%s:%s/'%(username, password, host, port)
 
   return MongoClient(uri)
