@@ -1,4 +1,4 @@
-# tools-bitcon-block-monitor
+# tools-bitcoin-block-monitor
 
 ## Environment:
 
