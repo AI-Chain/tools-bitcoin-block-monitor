@@ -57,93 +57,6 @@ def get_best_block_height ():
   best_block = rpc_conn.getblock(best_block_hash)
   return best_block['height']
 
-
-def save_tx (rpc_conn, block, tx):
-  '''
-    Save Bitcoin translation data
-    @param object rpc_conn: Bitcoin-core API RPC rpc_conn
-    @param object block block information
-    @param object tx translation information
-  '''
-
-  def _build_id (txid, vout_n, addr):
-    '''
-      build unique id (txid-vout[index]-addr)
-      @param string txid UTXO id 
-      @param int vout_n 
-      @param string addr
-    '''
-    return xxhash.xxh64('%s-%s-%s'%(txid, vout_n, addr)).hexdigest()
-
-  def _save_utxo (btc_db, block, tx):
-    '''
-      Save the translation information to the mongodb
-      @param object btc_db the DB name
-      @param object block block information
-      @param object tx translation information
-    '''
-
-    for vout in tx['vout']:
-      # money
-      vout['value'] = float(vout['value'])
-
-      if 'addresses' not in vout['scriptPubKey']:
-        continue
-
-      for addr in vout['scriptPubKey']['addresses']:
-
-        _id = _build_id(tx['txid'], vout['n'], addr)
-        data = {
-          '_id': _id,
-          'address': addr,
-          'txid': tx['txid'],
-          'vout_n': vout['n'],
-          'scriptPubKey_hex': vout['scriptPubKey']['hex'],
-          'amount': vout['value'], # satoshis = vout['value'] * 100000000
-
-          'height': block['height'],
-          'confirmations': tx['confirmations'],
-          'is_coinbase': 0,
-          'tx_type': 0 # 0: income, 1: expenditure
-        }
-
-        try:
-          inserted_id = btc_db.utxo.insert_one(data).inserted_id
-        except DuplicateKeyError, e:
-          # print str(e)
-          pass
-
-  mdb_conn = get_mongo_conn()
-  btc_db = mdb_conn[bitcoin_utxo_db]
-
-  _save_utxo (btc_db, block, tx)
-
-  for vin in tx['vin']:
-    # set translation coinbase flag
-    if 'coinbase' in vin:
-      btc_db.utxo.update({'txid': tx['txid']}, {
-        '$set': {
-          'is_coinbase': 1,
-          'coinbase': vin['coinbase']
-        }
-      })
-
-    else:
-      tx_in = rpc_conn.getrawtransaction(vin['txid'], 1)
-
-      if 'addresses' in tx_in['vout'][vin['vout']]['scriptPubKey']:
-        for vin_addr in tx_in['vout'][vin['vout']]['scriptPubKey']['addresses']:
-          
-          _id = _build_id (tx_in['txid'], vin['vout'], vin_addr)
-
-          btc_db.utxo.update({'_id': _id}, {
-            '$set': {
-              'tx_type': 1,
-              'next_txid': tx['txid']
-            }
-          })
-
-
 def blocks_utxo_scan (rpc_conn, height_start, height_end, best_block_height = None):
   '''
     block scan
@@ -159,16 +72,15 @@ def blocks_utxo_scan (rpc_conn, height_start, height_end, best_block_height = No
   # polling  
   for block in blocks:
     for txid in block['tx']:
-      try:
-        tx = rpc_conn.getrawtransaction(txid, 1)
-        save_tx(rpc_conn, block, tx)
-        
-      except JSONRPCException, e:         
-        logger.error('%s, {block_hash}: %s, {txid}: %s'% (str(e), block['hash'], txid) )
+      redis_conn = RedisPool.getInstance()
+      redis_conn.rpush('txid_list', txid)
 
     redis_conn = RedisPool.getInstance()
     redis_conn.hset(btc_scan, btc_scan_lastest_height, block['height'])
     logger.info('[block-scan] block height: %s / %s'%(block['height'], best_block_height))
+
+
+# todo 
 
 def block_monitor ():
   '''
@@ -217,8 +129,7 @@ if __name__ == '__main__':
   try:
     block_monitor()
   except Exception, e:
-    
-    logger.error('[block-scan-error] %s'%(str(e) ) )
+    logger.error('[block-scan-error] %s'%( str(e) ) )
 
   # while 1:
   #   block_monitor()
