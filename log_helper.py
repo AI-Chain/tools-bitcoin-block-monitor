@@ -21,6 +21,9 @@ LOG_FILE_PATH = os.environ.get("LOG_FILE_PATH")
 LOG_FILE_SIZE = int(os.environ.get("LOG_FILE_SIZE"))
 LOG_BACKUP_COUNT = int(os.environ.get("LOG_BACKUP_COUNT"))
 
+FORMAT = "%(asctime)-15s %(name)s %(message)s"
+fmt = logging.Formatter(FORMAT, datefmt=datefmt)
+
 class ContextFilter(logging.Filter):
   '''
     Error Log Filter
@@ -34,10 +37,8 @@ class ContextFilter(logging.Filter):
       with open (fp, 'w') as f:
         f.write('%s %s\n'% (dt, record.msg))
       
+    return True
 
-
-FORMAT = "%(asctime)-15s %(name)s %(message)s"
-fmt = logging.Formatter(FORMAT, datefmt=datefmt)
 
 def get_logger(name):
   """

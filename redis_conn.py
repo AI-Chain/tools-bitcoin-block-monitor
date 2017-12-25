@@ -23,7 +23,7 @@ class RedisPool():
     if RedisPool.__instance__ is None:
 
       RedisPool.__pool__ = redis.ConnectionPool(host = host, port = port, db = db)
-      RedisPool.__instance__ = redis.Redis(connection_pool=RedisPool.__pool__)
+      RedisPool.__instance__ = redis.Redis(connection_pool=RedisPool.__pool__, socket_connect_timeout=2)
 
     return RedisPool.__instance__
 

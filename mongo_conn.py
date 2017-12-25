@@ -18,4 +18,4 @@ def get_mongo_conn ():
   if username and password:
     uri = 'mongodb://%s:%s@%s:%s/'%(username, password, host, port)
 
-  return MongoClient(uri)
+  return MongoClient(uri, socketTimeoutMS=3000, connectTimeoutMS=2000, serverSelectionTimeoutMS=2000)
