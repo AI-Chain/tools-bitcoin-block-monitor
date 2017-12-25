@@ -8,12 +8,36 @@
 # @since 2015-12-29 12:55:28
 
 import os
+import socket
+import time
+from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
+
+datefmt='%Y-%m-%d %H:%M:%S'
+
+LOG_LEVEL = int(os.environ.get("LOG_LEVEL"))
+LOG_FILE_PATH = os.environ.get("LOG_FILE_PATH")
+LOG_FILE_SIZE = int(os.environ.get("LOG_FILE_SIZE"))
+LOG_BACKUP_COUNT = int(os.environ.get("LOG_BACKUP_COUNT"))
+
+class ContextFilter(logging.Filter):
+  '''
+    Error Log Filter
+  '''
+  def filter(self, record):
+    if record.levelname == 'ERROR':
+
+      fp = '%s.%s'%(LOG_FILE_PATH, record.levelname)
+      dt = time.strftime(datefmt, time.gmtime())
+
+      with open (fp, 'w') as f:
+        f.write('%s %s\n'% (dt, record.msg))
+      
+
 
 FORMAT = "%(asctime)-15s %(name)s %(message)s"
-fmt = logging.Formatter(FORMAT, datefmt='%Y-%m-%d %H:%M:%S')
+fmt = logging.Formatter(FORMAT, datefmt=datefmt)
 
 def get_logger(name):
   """
@@ -21,16 +45,16 @@ def get_logger(name):
   """
 
   logger = logging.getLogger(name)
-  logger.setLevel(int(os.environ.get("LOG_LEVEL")))
+  logger.setLevel(LOG_LEVEL)
 
   # add a rotating handler
-  handler = RotatingFileHandler(os.environ.get("LOG_FILE_PATH"), 
-                                maxBytes = int(os.environ.get("LOG_FILE_SIZE")),
-                                backupCount = int(os.environ.get("LOG_BACKUP_COUNT"))
-
-                              )
+  handler = RotatingFileHandler(LOG_FILE_PATH, 
+                                maxBytes = LOG_FILE_SIZE,
+                                backupCount = LOG_BACKUP_COUNT)
 
   handler.setFormatter(fmt)
   logger.addHandler(handler)
 
+  f = ContextFilter()
+  logger.addFilter(f)
   return logger
