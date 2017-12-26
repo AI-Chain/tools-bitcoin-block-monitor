@@ -21,6 +21,7 @@ logger = get_logger(__file__)
 
 bitcoin_utxo_db = 'btc_db'
 txid_list = 'txid_list'
+txid_inserted = 'txid_inserted'
 
 def decimal_default (obj):
   '''
@@ -57,12 +58,14 @@ def add_utxos (tx):
     mdb_conn = get_mongo_conn()
     btc_db = mdb_conn[bitcoin_utxo_db]
 
+    redis_conn = RedisPool.getInstance()
+
     for addr in vout['scriptPubKey']['addresses']:
       # add new utxo data
 
       _id = build_id(tx['txid'], vout['n'], addr)
 
-      item = btc_db.utxo.find_one({'_id': _id})
+      item = redis_conn.hget(txid_inserted, _id)
 
       if not item:
 
@@ -83,8 +86,11 @@ def add_utxos (tx):
         btc_db.utxo.insert_one(data).inserted_id
         logger.info('[insert-utxo] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
 
+        # txid_inserted
+        redis_conn.hset(txid_inserted, _id, '1')
       else :
         logger.info('[insert-utxo-dupulicate] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
+
 
       return _id
 
