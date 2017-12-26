@@ -132,6 +132,7 @@ if __name__ == '__main__':
     block_monitor()
   except Exception, e:
     logger.error('[block-scan-error] %s'%( str(e) ) )
+    logger.error(traceback.format_exc())
 
   # while 1:
   #   block_monitor()

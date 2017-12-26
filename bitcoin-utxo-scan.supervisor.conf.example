@@ -1,0 +1,10 @@
+[program:bitcoin_utxo_parser_task]
+command=./pyenv/bin/python bitcoin-utxo-parser.py
+directory=~/tools-bitcoin-block-monitor
+autostart=true
+autorestart=true
+process_name=%(program_name)s_%(process_num)02d
+numprocs=2
+stdout_logfile=/tmp/bitcoin-utxo-parser-task.supervisor.log
+redirect_stderr=true
+stopsignal=QUIT
