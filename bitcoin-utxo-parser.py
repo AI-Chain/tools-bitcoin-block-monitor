@@ -21,7 +21,8 @@ logger = get_logger(__file__)
 
 bitcoin_utxo_db = 'btc_db'
 txid_list = 'txid_list'
-txid_inserted = 'txid_inserted'
+utxo_item_inserted = 'utxo_item_inserted'
+tx_inserted = 'tx_inserted'
 
 def decimal_default (obj):
   '''
@@ -47,6 +48,12 @@ def add_utxos (tx):
     @param dict tx 
     @return string
   '''
+
+  redis_conn = RedisPool.getInstance()
+
+  mdb_conn = get_mongo_conn()
+  btc_db = mdb_conn[bitcoin_utxo_db]
+
   for vout in tx['vout']:
     # money
     vout['value'] = float(vout['value'])
@@ -55,17 +62,12 @@ def add_utxos (tx):
       logger.info('[addresses] not found in vout->scriptPubKey')
       continue
 
-    mdb_conn = get_mongo_conn()
-    btc_db = mdb_conn[bitcoin_utxo_db]
-
-    redis_conn = RedisPool.getInstance()
-
     for addr in vout['scriptPubKey']['addresses']:
       # add new utxo data
 
       _id = build_id(tx['txid'], vout['n'], addr)
 
-      item = redis_conn.hget(txid_inserted, _id)
+      item = redis_conn.hget(utxo_item_inserted, _id)
 
       if not item:
 
@@ -86,28 +88,53 @@ def add_utxos (tx):
         btc_db.utxo.insert_one(data).inserted_id
         logger.info('[insert-utxo] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
 
-        # txid_inserted
-        redis_conn.hset(txid_inserted, _id, '1')
+        # utxo_item_inserted
+        redis_conn.hset(utxo_item_inserted, _id, '1')
       else :
         logger.info('[insert-utxo-dupulicate] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
 
-
       return _id
 
+def get_save_tx (txid):
+  '''
+    Get and Save tx
+  '''
+  redis_conn = RedisPool.getInstance()
+  mdb_conn = get_mongo_conn()
+  btc_db = mdb_conn[bitcoin_utxo_db]
 
-def save_tx (tx):
+  # check tx inserted
+  is_tx_inserted = redis_conn.hget(tx_inserted, txid)
+
+  if not is_tx_inserted:
+    rpc_conn = get_rpc_conn()
+    tx = rpc_conn.getrawtransaction(txid, 1)
+    btc_db.tx.insert({
+      "_id": txid,
+      "data": tx
+    })
+    redis_conn.hset(tx_inserted, txid, '1')
+
+    return tx
+  else: 
+    tx = btc_db.tx.find_one({'_id': txid})
+
+    return tx['data']
+
+def save_tx (txid):
   '''
     Save Bitcoin translation data
     @param object block block information
     @param object tx translation information
   '''
-  
-  rpc_conn = get_rpc_conn()
-  tx = rpc_conn.getrawtransaction(txid, 1)
-  add_utxos(tx)
 
+  tx = get_save_tx(txid)
+  
   mdb_conn = get_mongo_conn()
   btc_db = mdb_conn[bitcoin_utxo_db]
+  
+
+  add_utxos(tx)
 
   ids = []
   for vin in tx['vin']:
@@ -124,9 +151,10 @@ def save_tx (tx):
     else:
       rpc_conn = get_rpc_conn()
       time_get_tx_in_start = time.time()
-      tx_in = rpc_conn.getrawtransaction(vin['txid'], 1)
+
+      tx_in = get_save_tx(vin['txid'])
+
       time_get_tx_in_end = time.time()
-      # logger.info('===========>add tx_in: %s, %s, %s' % (time_get_tx_in_end-time_get_tx_in_start, vin['txid'], json.dumps(tx_in, default=decimal_default) ) )
       add_utxos(tx_in)
 
       if 'addresses' in tx_in['vout'][vin['vout']]['scriptPubKey']:

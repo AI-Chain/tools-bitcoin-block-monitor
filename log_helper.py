@@ -34,7 +34,7 @@ class ContextFilter(logging.Filter):
       fp = '%s.%s'%(LOG_FILE_PATH, record.levelname)
       dt = time.strftime(datefmt, time.gmtime())
 
-      with open (fp, 'w') as f:
+      with open (fp, 'a') as f:
         f.write('%s %s\n'% (dt, record.msg))
       
     return True
