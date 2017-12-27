@@ -43,7 +43,7 @@ def build_id (txid, vout_n, addr):
   return xxhash.xxh64('%s-%s-%s'%(txid, vout_n, addr)).hexdigest()
 
 
-def add_utxos (tx):
+def add_utxo_items (tx):
   '''
     @param dict tx 
     @return string
@@ -85,7 +85,7 @@ def add_utxos (tx):
           'block_header_time': tx['time']
         }
 
-        btc_db.utxo.insert_one(data).inserted_id
+        btc_db.utxo_item.insert_one(data).inserted_id
         logger.info('[insert-utxo] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
 
         # utxo_item_inserted
@@ -108,7 +108,11 @@ def get_save_tx (txid):
 
   if not is_tx_inserted:
     rpc_conn = get_rpc_conn()
+
     tx = rpc_conn.getrawtransaction(txid, 1)
+    if 'hex' in tx:
+      del tx['hex']
+
     btc_db.tx.insert({
       "_id": txid,
       "data": tx
@@ -116,10 +120,12 @@ def get_save_tx (txid):
     redis_conn.hset(tx_inserted, txid, '1')
 
     return tx
-  else: 
-    tx = btc_db.tx.find_one({'_id': txid})
 
+  else: 
+
+    tx = btc_db.tx.find_one({'_id': txid})
     return tx['data']
+
 
 def save_tx (txid):
   '''
@@ -133,8 +139,7 @@ def save_tx (txid):
   mdb_conn = get_mongo_conn()
   btc_db = mdb_conn[bitcoin_utxo_db]
   
-
-  add_utxos(tx)
+  add_utxo_items(tx)
 
   ids = []
   for vin in tx['vin']:
@@ -142,7 +147,7 @@ def save_tx (txid):
 
     if 'coinbase' in vin:
 
-      btc_db.utxo.update({'txid': tx['txid']}, {
+      btc_db.utxo_item.update({'txid': tx['txid']}, {
         '$set': {
           'is_coinbase': 1,
           'coinbase': vin['coinbase']
@@ -150,12 +155,8 @@ def save_tx (txid):
       })
     else:
       rpc_conn = get_rpc_conn()
-      time_get_tx_in_start = time.time()
-
       tx_in = get_save_tx(vin['txid'])
-
-      time_get_tx_in_end = time.time()
-      add_utxos(tx_in)
+      add_utxo_items(tx_in)
 
       if 'addresses' in tx_in['vout'][vin['vout']]['scriptPubKey']:
 
@@ -168,7 +169,7 @@ def save_tx (txid):
     mdb_conn = get_mongo_conn()
     btc_db = mdb_conn[bitcoin_utxo_db]
 
-    btc_db.utxo.update({'_id': {'$in': ids}}, {
+    btc_db.utxo_item.update({'_id': {'$in': ids}}, {
       '$set': {
         'tx_type': 1,
         'next_txid': tx['txid']
@@ -178,6 +179,7 @@ def save_tx (txid):
     logger.info('[utxo-tx-type-1] txid: %s'% (','.join(ids)))
 
 if __name__ == '__main__': 
+
   while 1:
     txid = False
     try:
@@ -193,4 +195,3 @@ if __name__ == '__main__':
         redis_conn.lpush(txid_list, txid)
 
       logger.error(traceback.format_exc())
-

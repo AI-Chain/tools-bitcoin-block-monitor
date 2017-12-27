@@ -25,7 +25,6 @@ def _get_polling_step (start, end):
   end = int(end)
 
   total_steps = (end + polling_size - 1)  / polling_size
-
   start_step = start / polling_size
 
   return [start_step, total_steps]
