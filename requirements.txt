@@ -1,7 +1,6 @@
 click==6.7
 mongo==0.2.0
 pymongo==3.6.0
-python-bitcoinrpc==1.0
 python-dotenv==0.7.1
 redis==2.10.6
 wheel==0.24.0
