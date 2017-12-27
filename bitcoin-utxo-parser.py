@@ -24,6 +24,8 @@ txid_list = 'txid_list'
 utxo_item_inserted = 'utxo_item_inserted'
 tx_inserted = 'tx_inserted'
 
+switch_state = 'switch_state'
+
 def decimal_default (obj):
   '''
     Decimal in json dumps
@@ -71,23 +73,25 @@ def add_utxo_items (tx):
 
       if not item:
 
-        data = {
-          '_id': _id,
-          'address': addr,
-          'txid': tx['txid'],
-          'vout_n': vout['n'],
-          'amount': vout['value'], # satoshis = vout['value'] * 100000000
-          'blockhash': tx['blockhash'],
-          'confirmations': tx['confirmations'],
-          'is_coinbase': 0,
-          'tx_type': 0, # 0: income, 1: expenditure
-          'blocktime': tx['blocktime'],
-          'block_header_time': tx['time']
-        }
+        try:
+          data = {
+            '_id': _id,
+            'address': addr,
+            'txid': tx['txid'],
+            'vout_n': vout['n'],
+            'amount': vout['value'], # satoshis = vout['value'] * 100000000
+            'blockhash': tx['blockhash'],
+            'confirmations': tx['confirmations'],
+            'is_coinbase': 0,
+            'tx_type': 0, # 0: income, 1: expenditure
+            'blocktime': tx['blocktime'],
+            'block_header_time': tx['time']
+          }
 
-        btc_db.utxo_item.insert_one(data).inserted_id
-        logger.info('[insert-utxo] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
-
+          btc_db.utxo_item.insert_one(data)
+          logger.info('[insert-utxo] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
+        except DuplicateKeyError, de: 
+          pass
         # utxo_item_inserted
         redis_conn.hset(utxo_item_inserted, _id, '1')
       else :
@@ -122,7 +126,7 @@ def get_save_tx (txid):
     return tx
 
   else: 
-
+    logger.info('[tx-inserted] txid: %s' % txid)
     tx = btc_db.tx.find_one({'_id': txid})
     return tx['data']
 
@@ -184,6 +188,17 @@ if __name__ == '__main__':
     txid = False
     try:
       redis_conn = RedisPool.getInstance()
+
+      sw_state = redis_conn.hget(switch_state, 'state')
+      if sw_state == 'off':
+        logger.info('[sw_state off]')
+        time.sleep(10)
+        continue
+
+      if sw_state == 'exit':
+        logger.info('[sw_state exit]')
+        break
+
       txid = redis_conn.lpop(txid_list)
       if txid:
         logger.info('[utxo-txid-start-parse] txid: %s'% (txid))
