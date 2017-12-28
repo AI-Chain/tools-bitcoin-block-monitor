@@ -68,6 +68,7 @@ def add_utxo_items (tx):
       continue
 
     datas = []
+    item_ids = {}
     for addr in vout['scriptPubKey']['addresses']:
       # add new utxo data
 
@@ -90,17 +91,19 @@ def add_utxo_items (tx):
         }
 
         datas.append(data)
-  
+        item_ids[_id] = '1'
+
   if len(datas) > 0:
     try:
       btc_db.utxo_item.insert_many(datas, ordered = False)
     except DuplicateKeyError, de: 
       pass
     except BulkWriteError, be:
-      pass          
+      pass
+    if len(item_ids) > 1:
+      logger.info('[add-muti-ids] %s'%(len(item_ids)) )
 
-    for d in datas:
-      redis_conn.hset(utxo_item_inserted, d['_id'], '1')
+    redis_conn.hmset(utxo_item_inserted, item_ids)
 
   time_insert_new_utxo_end = time.time()
 
