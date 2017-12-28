@@ -97,7 +97,8 @@ def add_utxo_items (tx):
       else :
         logger.info('[insert-utxo-dupulicate] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
 
-      return _id
+  mdb_conn.close()
+
 
 def get_save_tx (txid):
   '''
@@ -121,6 +122,7 @@ def get_save_tx (txid):
       "_id": txid,
       "data": tx
     })
+    mdb_conn.close()
     redis_conn.hset(tx_inserted, txid, '1')
 
     return tx
@@ -128,6 +130,7 @@ def get_save_tx (txid):
   else: 
     logger.info('[tx-inserted] txid: %s' % txid)
     tx = btc_db.tx.find_one({'_id': txid})
+    mdb_conn.close()
     return tx['data']
 
 
@@ -144,7 +147,7 @@ def save_tx (txid):
 
   mdb_conn = get_mongo_conn()
   btc_db = mdb_conn[bitcoin_utxo_db]
-  
+
   ids = []
   for vin in tx['vin']:
     # set translation coinbase flag
@@ -168,6 +171,8 @@ def save_tx (txid):
           _id = build_id (tx_in['txid'], vin['vout'], vin_addr)
           ids.append(_id)
 
+  mdb_conn.close()
+
   # update utxo trade type
   if ids:
     mdb_conn = get_mongo_conn()
@@ -179,7 +184,7 @@ def save_tx (txid):
         'next_txid': tx['txid']
       }
     })
-
+    mdb_conn.close()
     logger.info('[utxo-tx-type-1] txid: %s'% (','.join(ids)))
 
 if __name__ == '__main__': 
