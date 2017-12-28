@@ -190,8 +190,6 @@ def save_tx (txid):
       # new utxo
       if not tx_in['is_inserted_before']:
         add_utxo_items(tx_in)
-      else:
-        logger.info('[utxo-is-inserted-before-vin] %s'%(txid) )
 
       if 'addresses' in tx_in['vout'][vin['vout']]['scriptPubKey']:
 
