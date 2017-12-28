@@ -56,6 +56,8 @@ def add_utxo_items (tx):
   mdb_conn = get_mongo_conn()
   btc_db = mdb_conn[bitcoin_utxo_db]
 
+  time_insert_new_utxo_start = time.time()
+
   for vout in tx['vout']:
     # money
     vout['value'] = float(vout['value'])
@@ -93,7 +95,8 @@ def add_utxo_items (tx):
         # utxo_item_inserted
         redis_conn.hset(utxo_item_inserted, _id, '1')
 
-  logger.info('[insert-new-items] txid: %s, blockhash: %s, vout_count: %s'% (tx['txid'], tx['blockhash'], len(tx['vout'])) )
+  time_insert_new_utxo_end = time.time()
+  logger.info('[insert-new-items] txid: %s, blockhash: %s, vout_count: %s, time: %s'% (tx['txid'], tx['blockhash'], len(tx['vout']), time_insert_new_utxo_end-time_insert_new_utxo_start) )
   
   mdb_conn.close()
 
@@ -156,10 +159,7 @@ def save_tx (txid):
     logger.info('[tx-is-inserted-before] %s' %(txid) )
     return
 
-  time_insert_new_utxo_start = time.time()
   add_utxo_items(tx)
-  time_insert_new_utxo_end = time.time()
-  logger.info('[time-add-new-utxo-items-vout] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
 
   mdb_conn = get_mongo_conn()
   btc_db = mdb_conn[bitcoin_utxo_db]
@@ -177,7 +177,6 @@ def save_tx (txid):
       tx_in = get_save_tx(i)
       tx_in_dict[i] = tx_in
 
-  time_insert_new_utxo_start = time.time()
   # utxo item id array
   ids = []
   for vin in tx['vin']:
@@ -204,8 +203,6 @@ def save_tx (txid):
           _id = build_id (tx_in['txid'], vin['vout'], vin_addr)
           ids.append(_id)
 
-  time_insert_new_utxo_end = time.time()
-  logger.info('[time-add-new-utxo-items-vin] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
   mdb_conn.close()
 
   # update utxo trade type
