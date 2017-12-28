@@ -152,6 +152,7 @@ def save_tx (txid):
   
   # utxo inserted
   if tx['is_inserted_before']:
+    logger.info('[tx-is-inserted-before] %s' %(txid) )
     return
 
   add_utxo_items(tx)
@@ -172,6 +173,7 @@ def save_tx (txid):
       tx_in = get_save_tx(i)
       tx_in_dict[i] = tx_in
 
+  time_insert_new_utxo_start = time.time()
   # utxo item id array
   ids = []
   for vin in tx['vin']:
@@ -187,20 +189,19 @@ def save_tx (txid):
 
     else:
       tx_in = tx_in_dict[vin['txid']]
-
       # new utxo
       if not tx_in['is_inserted_before']:
-        time_insert_new_utxo_start = time.time()
-        add_utxo_items(tx_in)
-        time_insert_new_utxo_end = time.time()
-        logger.info('[time-add-new-utxo-items] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
         
+        add_utxo_items(tx_in)
+
       if 'addresses' in tx_in['vout'][vin['vout']]['scriptPubKey']:
 
         for vin_addr in tx_in['vout'][vin['vout']]['scriptPubKey']['addresses']:
           _id = build_id (tx_in['txid'], vin['vout'], vin_addr)
           ids.append(_id)
 
+  time_insert_new_utxo_end = time.time()
+  logger.info('[time-add-new-utxo-items] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
   mdb_conn.close()
 
   # update utxo trade type
