@@ -130,7 +130,6 @@ def get_save_tx (txid):
     return tx
 
   else: 
-    logger.info('[tx-inserted] txid: %s' % txid)
     tx = btc_db.tx.find_one({'_id': txid})
     mdb_conn.close()
 
