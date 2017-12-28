@@ -139,12 +139,12 @@ def save_tx (txid):
   '''
 
   tx = get_save_tx(txid)
-  
+    
+  add_utxo_items(tx)
+
   mdb_conn = get_mongo_conn()
   btc_db = mdb_conn[bitcoin_utxo_db]
   
-  add_utxo_items(tx)
-
   ids = []
   for vin in tx['vin']:
     # set translation coinbase flag
