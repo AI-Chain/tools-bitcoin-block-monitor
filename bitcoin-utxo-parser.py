@@ -194,6 +194,7 @@ def save_tx (txid):
         add_utxo_items(tx_in)
         time_insert_new_utxo_end = time.time()
         logger.info('[time-add-new-utxo-items] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
+        
       if 'addresses' in tx_in['vout'][vin['vout']]['scriptPubKey']:
 
         for vin_addr in tx_in['vout'][vin['vout']]['scriptPubKey']['addresses']:
