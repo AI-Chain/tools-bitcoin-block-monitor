@@ -153,13 +153,14 @@ def save_tx (txid):
     # set translation coinbase flag
 
     if 'coinbase' in vin:
-
+      logger.info('[utxo-coinbase] txid: %s, coinbase: %s'% (txid, vin['coinbase']))
       btc_db.utxo_item.update({'txid': tx['txid']}, {
         '$set': {
           'is_coinbase': 1,
           'coinbase': vin['coinbase']
         }
       })
+
     else:
       rpc_conn = get_rpc_conn()
       tx_in = get_save_tx(vin['txid'])
