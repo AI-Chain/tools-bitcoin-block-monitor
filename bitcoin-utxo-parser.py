@@ -88,7 +88,7 @@ def add_utxo_items (tx):
           }
 
           btc_db.utxo_item.insert_one(data)
-          logger.info('[insert-utxo] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
+          logger.info('[insert-utxo-item] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
         except DuplicateKeyError, de: 
           pass
         # utxo_item_inserted
@@ -178,7 +178,6 @@ def save_tx (txid):
     # set translation coinbase flag
 
     if 'coinbase' in vin:
-      logger.info('[utxo-coinbase] txid: %s, coinbase: %s'% (txid, vin['coinbase']))
       btc_db.tx.update({'_id': tx['txid']}, {
         '$set': {
           'is_coinbase': 1,
