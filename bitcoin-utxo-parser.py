@@ -117,10 +117,13 @@ def get_save_tx (txid):
     if 'hex' in tx:
       del tx['hex']
 
-    btc_db.tx.insert({
-      "_id": txid,
-      "data": tx
-    })
+    try:
+      btc_db.tx.insert({
+        "_id": txid,
+        "data": tx
+      })
+    except DuplicateKeyError, de:
+      pass
     mdb_conn.close()
     redis_conn.hset(tx_inserted, txid, '1')
 
