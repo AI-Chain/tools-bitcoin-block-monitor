@@ -11,6 +11,7 @@ import decimal
 import xxhash
 from bitcoinrpc.authproxy import JSONRPCException
 from pymongo.errors import DuplicateKeyError
+from pymongo.errors import BulkWriteError
 import env_setup
 from redis_conn import RedisPool
 from mongo_conn import get_mongo_conn
@@ -58,11 +59,6 @@ def add_utxo_items (tx):
 
   time_insert_new_utxo_start = time.time()
 
-
-  time_total_get_item = 0
-  time_total_insert_item = 0
-  time_total_set_item = 0
-
   for vout in tx['vout']:
     # money
     vout['value'] = float(vout['value'])
@@ -71,56 +67,44 @@ def add_utxo_items (tx):
       logger.info('[addresses] not found in vout->scriptPubKey')
       continue
 
+    datas = []
     for addr in vout['scriptPubKey']['addresses']:
       # add new utxo data
 
       _id = build_id(tx['txid'], vout['n'], addr)
-
-      time_get_item_start = time.time()
       
       item = redis_conn.hget(utxo_item_inserted, _id)
       
-      time_get_item_end = time.time()
-      time_total_get_item+= time_get_item_end - time_get_item_start
-
       if not item:
+        data = {
+          '_id': _id,
+          'address': addr,
+          'txid': tx['txid'],
+          'vout_n': vout['n'],
+          'amount': vout['value'], # satoshis = vout['value'] * 100000000
+          'blockhash': tx['blockhash'],
+          'confirmations': tx['confirmations'],
+          'tx_type': 0, # 0: income, 1: expenditure
+          'blocktime': tx['blocktime'],
+          'block_header_time': tx['time']
+        }
 
-        try:
-          data = {
-            '_id': _id,
-            'address': addr,
-            'txid': tx['txid'],
-            'vout_n': vout['n'],
-            'amount': vout['value'], # satoshis = vout['value'] * 100000000
-            'blockhash': tx['blockhash'],
-            'confirmations': tx['confirmations'],
-            'tx_type': 0, # 0: income, 1: expenditure
-            'blocktime': tx['blocktime'],
-            'block_header_time': tx['time']
-          }
+        datas.append(data)
+  
+  if len(datas) > 0:
+    try:
+      btc_db.utxo_item.insert_many(datas, ordered = False)
+    except DuplicateKeyError, de: 
+      pass
+    except BulkWriteError, be:
+      pass          
 
-          time_insert_item_start = time.time()
-          
-          btc_db.utxo_item.insert_one(data)
-
-          time_insert_item_end = time.time()
-          time_total_insert_item += time_insert_item_end - time_insert_item_start
-
-        except DuplicateKeyError, de: 
-          pass
-        # utxo_item_inserted
-
-        time_set_item_start = time.time()
-
-        redis_conn.hset(utxo_item_inserted, _id, '1')
-
-        time_set_item_end = time.time()
-        time_total_set_item += time_set_item_end-time_set_item_start
+    for d in datas:
+      redis_conn.hset(utxo_item_inserted, d['_id'], '1')
 
   time_insert_new_utxo_end = time.time()
 
-  
-  logger.info('[insert-new-items] txid: %s, blockhash: %s, vout_count: %s, time: %s, time_total_get_item: %s, time_total_insert_item: %s, time_total_set_item: %s'% (tx['txid'], tx['blockhash'], len(tx['vout']), time_insert_new_utxo_end-time_insert_new_utxo_start, time_total_get_item, time_total_insert_item, time_total_set_item) )
+  logger.info('[insert-new-items] txid: %s, blockhash: %s, vout_count: %s, time: %s'% (tx['txid'], tx['blockhash'], len(tx['vout']), time_insert_new_utxo_end-time_insert_new_utxo_start) )
   
   mdb_conn.close()
 
