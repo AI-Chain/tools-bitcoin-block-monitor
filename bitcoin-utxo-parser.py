@@ -59,6 +59,8 @@ def add_utxo_items (tx):
 
   time_insert_new_utxo_start = time.time()
 
+  datas = []
+  item_ids = {}
   for vout in tx['vout']:
     # money
     vout['value'] = float(vout['value'])
@@ -67,8 +69,6 @@ def add_utxo_items (tx):
       logger.info('[addresses] not found in vout->scriptPubKey')
       continue
 
-    datas = []
-    item_ids = {}
     for addr in vout['scriptPubKey']['addresses']:
       # add new utxo data
 
@@ -100,6 +100,7 @@ def add_utxo_items (tx):
       pass
     except BulkWriteError, be:
       pass
+
     if len(item_ids) > 1:
       logger.info('[add-muti-ids] %s'%(len(item_ids)) )
 
