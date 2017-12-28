@@ -110,9 +110,13 @@ def get_save_tx (txid):
   is_tx_inserted = redis_conn.hget(tx_inserted, txid)
 
   if not is_tx_inserted:
+    time_rpc_start = time.time()
     rpc_conn = get_rpc_conn()
 
     tx = rpc_conn.getrawtransaction(txid, 1)
+    time_rpc_end = time.time()
+    logger.info('[time-rpc-get-utxo] %s'% (time_rpc_end-time_rpc_start) )
+
     if 'hex' in tx:
       del tx['hex']
 
@@ -148,7 +152,6 @@ def save_tx (txid):
   
   # utxo inserted
   if tx['is_inserted_before']:
-    logger.info('[utxo-is-inserted-before-vout] %s'%(txid) )
     return
 
   add_utxo_items(tx)
@@ -165,7 +168,6 @@ def save_tx (txid):
         tx_in_txids.append(vin['txid'])
 
   if len(tx_in_txids) > 0:
-    rpc_conn = get_rpc_conn()
     for i in tx_in_txids:
       tx_in = get_save_tx(i)
       tx_in_dict[i] = tx_in
