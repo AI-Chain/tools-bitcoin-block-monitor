@@ -82,7 +82,6 @@ def add_utxo_items (tx):
             'amount': vout['value'], # satoshis = vout['value'] * 100000000
             'blockhash': tx['blockhash'],
             'confirmations': tx['confirmations'],
-            'is_coinbase': 0,
             'tx_type': 0, # 0: income, 1: expenditure
             'blocktime': tx['blocktime'],
             'block_header_time': tx['time']
@@ -154,7 +153,7 @@ def save_tx (txid):
 
     if 'coinbase' in vin:
       logger.info('[utxo-coinbase] txid: %s, coinbase: %s'% (txid, vin['coinbase']))
-      btc_db.utxo_item.update({'txid': tx['txid']}, {
+      btc_db.tx.update({'_id': tx['txid']}, {
         '$set': {
           'is_coinbase': 1,
           'coinbase': vin['coinbase']
