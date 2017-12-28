@@ -88,14 +88,13 @@ def add_utxo_items (tx):
           }
 
           btc_db.utxo_item.insert_one(data)
-          logger.info('[insert-utxo-item] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
         except DuplicateKeyError, de: 
           pass
         # utxo_item_inserted
         redis_conn.hset(utxo_item_inserted, _id, '1')
-      else :
-        logger.info('[insert-utxo-item-dupulicate] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
 
+  logger.info('[insert-new-items] txid: %s, blockhash: %s, vout_count: %s'% (tx['txid'], tx['blockhash'], len(tx['vout'])) )
+  
   mdb_conn.close()
 
 
