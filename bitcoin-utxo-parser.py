@@ -94,7 +94,7 @@ def add_utxo_items (tx):
         # utxo_item_inserted
         redis_conn.hset(utxo_item_inserted, _id, '1')
       else :
-        logger.info('[insert-utxo-dupulicate] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
+        logger.info('[insert-utxo-item-dupulicate] inserted_id: %s, txid: %s, blockhash: %s, vout_n: %s, amount: %s'% (_id, tx['txid'], tx['blockhash'], vout['n'], vout['value']))
 
   mdb_conn.close()
 
@@ -127,12 +127,15 @@ def get_save_tx (txid):
     mdb_conn.close()
     redis_conn.hset(tx_inserted, txid, '1')
 
+    tx['is_inserted_before'] = False
     return tx
 
   else: 
     logger.info('[tx-inserted] txid: %s' % txid)
     tx = btc_db.tx.find_one({'_id': txid})
     mdb_conn.close()
+
+    tx['data']['is_inserted_before'] = True
     return tx['data']
 
 
@@ -144,7 +147,12 @@ def save_tx (txid):
   '''
 
   tx = get_save_tx(txid)
-    
+  
+  # utxo inserted
+  if tx['is_inserted_before']:
+    logger.info('[utxo-is-inserted-before-vout] %s'%(txid) )
+    return
+
   add_utxo_items(tx)
 
   mdb_conn = get_mongo_conn()
@@ -180,7 +188,13 @@ def save_tx (txid):
 
     else:
       tx_in = tx_in_dict[vin['txid']]
-      add_utxo_items(tx_in)
+
+      # new utxo
+      if not tx_in['is_inserted_before']:
+        add_utxo_items(tx_in)
+      else:
+        logger.info('[utxo-is-inserted-before-vin] %s'%(txid) )
+
       if 'addresses' in tx_in['vout'][vin['vout']]['scriptPubKey']:
 
         for vin_addr in tx_in['vout'][vin['vout']]['scriptPubKey']['addresses']:
@@ -194,7 +208,7 @@ def save_tx (txid):
     mdb_conn = get_mongo_conn()
     btc_db = mdb_conn[bitcoin_utxo_db]
 
-    btc_db.utxo_item.update({'_id': {'$in': ids}}, {
+    btc_db.utxo_item.update({'_id': {'$in': ids} }, {
       '$set': {
         'tx_type': 1,
         'next_txid': tx['txid']
