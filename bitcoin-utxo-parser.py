@@ -158,6 +158,7 @@ def save_tx (txid):
 
   time_insert_new_utxo_start = time.time()
   add_utxo_items(tx)
+  time_insert_new_utxo_end = time.time()
   logger.info('[time-add-new-utxo-items-vout] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
 
   mdb_conn = get_mongo_conn()
