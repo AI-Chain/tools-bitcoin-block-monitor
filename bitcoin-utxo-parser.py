@@ -149,13 +149,16 @@ def save_tx (txid):
   '''
 
   tx = get_save_tx(txid)
+
   
   # utxo inserted
   if tx['is_inserted_before']:
     logger.info('[tx-is-inserted-before] %s' %(txid) )
     return
 
+  time_insert_new_utxo_start = time.time()
   add_utxo_items(tx)
+  logger.info('[time-add-new-utxo-items-vout] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
 
   mdb_conn = get_mongo_conn()
   btc_db = mdb_conn[bitcoin_utxo_db]
@@ -201,7 +204,7 @@ def save_tx (txid):
           ids.append(_id)
 
   time_insert_new_utxo_end = time.time()
-  logger.info('[time-add-new-utxo-items] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
+  logger.info('[time-add-new-utxo-items-vin] %s' %(time_insert_new_utxo_end-time_insert_new_utxo_start) )
   mdb_conn.close()
 
   # update utxo trade type
