@@ -150,6 +150,21 @@ def save_tx (txid):
   mdb_conn = get_mongo_conn()
   btc_db = mdb_conn[bitcoin_utxo_db]
 
+  # add utxo
+  tx_in_txids = []
+  tx_in_dict = {}
+  for vin in tx['vin']:
+    if not 'coinbase' in vin:
+      if vin['txid'] not in tx_in_txids:
+        tx_in_txids.append(vin['txid'])
+
+  if len(tx_in_txids) > 0:
+    rpc_conn = get_rpc_conn()
+    for i in tx_in_txids:
+      tx_in = get_save_tx(i)
+      tx_in_dict[i] = tx_in
+
+  # utxo item id array
   ids = []
   for vin in tx['vin']:
     # set translation coinbase flag
@@ -164,10 +179,8 @@ def save_tx (txid):
       })
 
     else:
-      rpc_conn = get_rpc_conn()
-      tx_in = get_save_tx(vin['txid'])
+      tx_in = tx_in_dict[vin['txid']]
       add_utxo_items(tx_in)
-
       if 'addresses' in tx_in['vout'][vin['vout']]['scriptPubKey']:
 
         for vin_addr in tx_in['vout'][vin['vout']]['scriptPubKey']['addresses']:
