@@ -59,6 +59,9 @@ def add_utxo_items (tx):
 
   time_insert_new_utxo_start = time.time()
 
+  time_total_redis_hget = 0
+  time_total_mongo_insert = 0
+
   datas = []
   item_ids = {}
   for vout in tx['vout']:
@@ -74,7 +77,12 @@ def add_utxo_items (tx):
 
       _id = build_id(tx['txid'], vout['n'], addr)
       
+      time_redis_hget_start = time.time()
+
       item = redis_conn.hget(utxo_item_inserted, _id)
+
+      time_redis_hget_end = time.time()
+      time_total_redis_hget += time_redis_hget_end-time_redis_hget_start
       
       if not item:
         data = {
@@ -95,20 +103,36 @@ def add_utxo_items (tx):
 
   if len(datas) > 0:
     try:
+      time_total_mongo_start = time.time()
+
       btc_db.utxo_item.insert_many(datas, ordered = False)
+
+      time_total_mongo_end = time.time()
+      time_total_mongo_insert += time_total_mongo_end-time_total_mongo_start
     except DuplicateKeyError, de: 
       pass
     except BulkWriteError, be:
       pass
 
-    if len(item_ids) > 1:
-      logger.info('[add-muti-ids] %s'%(len(item_ids)) )
-
+    time_redis_hmset_start = time.time()
     redis_conn.hmset(utxo_item_inserted, item_ids)
+
+    time_redis_hmset_end = time.time()
+    time_total_redis_hmset = time_redis_hmset_end-time_redis_hmset_start
 
   time_insert_new_utxo_end = time.time()
 
-  logger.info('[insert-new-items] txid: %s, blockhash: %s, vout_count: %s, time: %s'% (tx['txid'], tx['blockhash'], len(tx['vout']), time_insert_new_utxo_end-time_insert_new_utxo_start) )
+
+  logger.info('[insert-new-items] txid: %s, blockhash: %s, vout_count: %s, time: %s, time_total_redis_hget: %s, time_total_mongo_insert: %s, time_total_redis_hmset: %s'% (
+      tx['txid'], 
+      tx['blockhash'], 
+      len(tx['vout']), 
+      time_insert_new_utxo_end-time_insert_new_utxo_start,
+      time_total_redis_hget,
+      time_total_mongo_insert,
+      time_total_redis_hmset
+    ) 
+  )
   
   mdb_conn.close()
 
