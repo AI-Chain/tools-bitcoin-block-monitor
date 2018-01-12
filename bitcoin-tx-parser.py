@@ -79,7 +79,7 @@ def save_tx (txid):
       coinbase_vin = vin['coinbase']
 
     else:
-      redis_conn.rpush(tx_item_in_list, 'in,%s,%s,%s'% (txid, vin['txid'], vin['vout']) )
+      redis_conn.rpush(tx_item_list, 'in,%s,%s,%s'% (txid, vin['txid'], vin['vout']) )
 
   mdb_conn = get_mongo_conn(mongo_host, mongo_port)
   btc_db = mdb_conn[bitcoin_utxo_db]
