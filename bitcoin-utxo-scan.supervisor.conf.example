@@ -1,5 +1,5 @@
 [program:bitcoin_utxo_parser_task]
-command=/var/btc-core-scan/tools-bitcoin-block-monitor/pyenv/bin/python bitcoin-utxo-parser.py
+command=/var/btc-core-scan/tools-bitcoin-block-monitor/pyenv/bin/python bitcoin-tx-parser.py
 directory=/var/btc-core-scan/tools-bitcoin-block-monitor
 autostart=true
 autorestart=true
