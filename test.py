@@ -15,7 +15,7 @@ class RedisPool():
   __cursor__ = None
   
   @staticmethod
-  def getInstance():
+  def getConn():
     """
       get Redis connection
     """
@@ -28,32 +28,36 @@ class RedisPool():
 
 if __name__ == '__main__':
   
-  sec = 60
-  arr = []
-  index = 0
-  total = 0
   while 1:
-    if index == sec: break
+    sec = 60
+    arr = []
+    index = 0
+    total = 0
+    while 1:
+      if index == sec: break
 
-    redis_conn = RedisPool.getInstance()
-    total = redis_conn.llen('txid_list')
+      redis_conn = RedisPool.getConn()
+      total = redis_conn.llen('txid_list')
+      
+      arr.append(total)
+      
+      index += 1 
+
+      time.sleep(1)
     
-    arr.append(total)
-    
-    index += 1 
+    counter = []
+    x = 0
+    for i in range (0, len(arr)):
+      if i == len(arr) - 1: break
 
-    time.sleep(1)
-  
-  counter = []
-  x = 0
-  for i in range (0, len(arr)):
-    if i == len(arr) - 1: break
-
-    num = arr[i] - arr[i+1]
-    counter.append(num) 
-    x+= num
-  avg = x/sec
-  print 'second: %s, count: %s, avg/sec: %s'% (sec, x, avg)
-  print 'total: %s, total time: %s Hour' % (total, total/avg/60/60)
-  print '-------------------'
+      num = arr[i] - arr[i+1]
+      counter.append(num) 
+      x+= num
+    avg = x/sec
+    print 'second: %s, count: %s, avg/sec: %s'% (sec, x, avg)
+    try:
+      print 'total: %s, total time: %s Hour' % (total, total/avg/60/60)
+    except Exception, e:
+      pass
+    print '-------------------'
 

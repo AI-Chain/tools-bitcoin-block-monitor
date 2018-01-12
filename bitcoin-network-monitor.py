@@ -64,7 +64,7 @@ def blocks_utxo_scan (height_start, height_end, best_block_height = None):
 
       time_push_utxo_start = time.time()
 
-      redis_conn = RedisPool.getInstance()
+      redis_conn = RedisPool.getConn()
       redis_conn.rpush(txid_list, txid)
 
       time_push_utxo_end = time.time()
@@ -72,7 +72,7 @@ def blocks_utxo_scan (height_start, height_end, best_block_height = None):
       logger.info('[time-push-utxo]:  %s'%( time_push_utxo_end - time_push_utxo_start ) )
 
     time_set_last_height_start = time.time()
-    redis_conn = RedisPool.getInstance()
+    redis_conn = RedisPool.getConn()
     redis_conn.hset(btc_scan, btc_scan_lastest_height, block['height'])
     logger.info('[block-scan] block height: %s / %s'%(block['height'], best_block_height))
     time_set_last_height_end = time.time()
@@ -88,7 +88,7 @@ def block_monitor ():
   '''
   time_block_scan_start = time.time()
 
-  redis_conn = RedisPool.getInstance()
+  redis_conn = RedisPool.getConn()
   btc_local_newest_height = redis_conn.hget(btc_scan, btc_scan_lastest_height)
 
   if not btc_local_newest_height:

@@ -2,11 +2,19 @@
 
 import os
 import redis
+from hash_ring import HashRing
 import env_setup
 
-host = os.environ.get("REDIS_HOST")
-port = int(os.environ.get("REDIS_PORT"))
-db = os.environ.get("REDIS_DB")
+host = os.environ.get("REDIS_HOST_MONITOR")
+port = int(os.environ.get("REDIS_PORT_MONITOR"))
+db = os.environ.get("REDIS_DB_MONITOR")
+
+redis_txs_services = os.environ.get("REDIS_TX_SERVERS").split(',')
+
+txs_port = os.environ.get("REDIS_PORT_TX_SERVER")
+txs_db = os.environ.get("REDIS_DB_TX_SERVER")
+
+redis_ring = HashRing(redis_txs_services)
 
 class RedisPool():
 
@@ -16,7 +24,7 @@ class RedisPool():
   __cursor__ = None
   
   @staticmethod
-  def getInstance():
+  def getConn():
     """
       get Redis connection
     """
@@ -27,7 +35,14 @@ class RedisPool():
 
     return RedisPool.__instance__
 
+  @staticmethod
+  def getTxConn(k = ''):
+    host = redis_ring.get_node(k)
+    return redis.StrictRedis(host=host, port=txs_port, db=txs_port)
+
 if __name__ == '__main__':
-  # example
-  redis_conn = RedisPool.getInstance()
-  print redis_conn
+
+  print RedisPool.getTxConn('12345')
+
+#   # example
+  # redis_conn = RedisPool.getConn()
