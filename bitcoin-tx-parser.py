@@ -62,13 +62,13 @@ def save_tx (txid):
   is_coinbase = 0
   coinbase_vin = ''
 
+  redis_conn = RedisPool.getConn()
   for vout in tx['vout']:
 
     if 'addresses' not in vout['scriptPubKey']:
       logger.info('[addresses] not found in vout->scriptPubKey')
       continue
 
-    redis_conn = RedisPool.getConn()
     for addr in vout['scriptPubKey']['addresses']:
       redis_conn.rpush(tx_item_list, 'out,%s,%s,%s'% (tx['txid'], vout['n'], addr) )
 
