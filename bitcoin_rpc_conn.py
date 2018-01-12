@@ -15,5 +15,5 @@ def get_rpc_conn ():
     get bitcoin rpc connection
   '''
   url = "http://%s:%s@%s:%s"%(BITCOIN_RPC_USER, BITCOIN_RPC_PWD, BITCOIN_RPC_HOST, BITCOIN_RPC_PORT)
-  timeout = 2
+  timeout = 60
   return AuthServiceProxy(url, timeout=timeout)
